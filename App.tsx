@@ -4,17 +4,13 @@ import ProjectDashboard from './components/ProjectDashboard';
 import Editor from './components/Editor';
 import StyleEditor from './components/StyleEditor';
 import Preview from './components/Preview';
-import Auth from './components/Auth';
 import ProfileModal from './components/ProfileModal';
 import PricingModal from './components/PricingModal';
-import AdminPanelModal from './components/AdminPanelModal'; 
 import SubtitleConfigModal from './components/SubtitleConfigModal';
 import SubtitlePresetsModal from './components/SubtitlePresetsModal';
-import BypassErrorModal from './components/BypassErrorModal';
 import { SubtitleData, ViewState, User, ExportRecord, SubtitleConfig, SubtitlePreset } from './types';
 import { Sparkles, X, ClipboardPaste, Trash2, Languages, Activity } from 'lucide-react';
 import { syncUserToCloud, db, isFirebaseEnabled, USER_COLLECTION } from './services/firebase.ts';
-import { doc, onSnapshot } from "firebase/firestore";
 import { generateZipFromSubtitles } from './services/zipService';
 import { parseSubtitleContent, applyAutoCPL, rebuildSubtitleContent, normalizeText } from './services/parser';
 import { saveProjectState, loadProjectState, clearProjectState } from './services/persistenceService';
@@ -128,75 +124,6 @@ function App() {
         }
       });
   }, []);
-
-  // Handle credit acquisition from URL with Token/Key Verification
-  useEffect(() => {
-    const queryParams = new URLSearchParams(window.location.search);
-    
-    // Check for any parameter that starts with "verified"
-    let foundKey: string | null = null;
-    let isVerified = false;
-    
-    queryParams.forEach((value, key) => {
-        if (key.startsWith('verified') && value === 'true') {
-            foundKey = key;
-            isVerified = true;
-        }
-    });
-
-    if (isVerified && foundKey) {
-        const storedKey = localStorage.getItem('subswap_pending_vkey');
-        const tokenTime = localStorage.getItem('subswap_vtoken_time');
-        
-        // Anti-Bypass Logic: Must match the key exactly that we opened
-        if (!storedKey || foundKey !== storedKey) {
-            setBypassModalMessage("Bhai, shortener bypass mat kijiye. App ko support karne ke liye process pura karein.");
-            setIsBypassModalOpen(true);
-            window.history.replaceState({}, document.title, window.location.pathname);
-            return;
-        }
-
-        // Time Check: If returned in less than 1 minute, it's a bypass
-        const now = Date.now();
-        const timeDiff = now - parseInt(tokenTime || "0");
-
-        if (timeDiff < 60000) { // 60 seconds
-            setBypassModalMessage("⚠️ BYPASS DETECTED!\n\nAap bahut jaldi wapas aa gaye. Shortener pura karne mein kam se kam 1 minute lagta hai.");
-            setIsBypassModalOpen(true);
-            localStorage.removeItem('subswap_pending_vkey');
-            localStorage.removeItem('subswap_vtoken_time');
-            window.history.replaceState({}, document.title, window.location.pathname);
-            return;
-        }
-
-        // Token Expiry (2 hours max)
-        if (now - parseInt(tokenTime || "0") > 7200000) {
-            setBypassModalMessage("❌ LINK EXPIRED!\n\nYe credit link purana ho gaya hai. Naya link generate kijiye.");
-            setIsBypassModalOpen(true);
-            localStorage.removeItem('subswap_pending_vkey');
-            localStorage.removeItem('subswap_vtoken_time');
-            window.history.replaceState({}, document.title, window.location.pathname);
-            return;
-        }
-
-        // VALID VERIFICATION
-        if (currentUser) {
-            const updatedUser = { 
-                ...currentUser, 
-                credits: (currentUser.credits || 0) + 4 
-            };
-            
-            saveUserLocally(updatedUser);
-            
-            // CRITICAL: Remove key immediately so it cannot be reused
-            localStorage.removeItem('subswap_pending_vkey');
-            localStorage.removeItem('subswap_vtoken_time');
-            
-            alert("✅ 4 Credits Added Successfully!");
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }
-    }
-  }, [currentUser, saveUserLocally]);
 
   // --- HELPER: Update Session from CLOUD (Does NOT write back to cloud to avoid loops) ---
   const updateSessionFromCloud = useCallback((cloudUser: User) => {
@@ -357,44 +284,6 @@ function App() {
 
       return () => clearInterval(interval);
   }, [currentUser, validateUserAccount]);
-
-  // --- REAL-TIME CLOUD LISTENER (Fixes Plan Update Issue) ---
-  useEffect(() => {
-      if (!currentUser?.uid || !isFirebaseEnabled || !db) return;
-
-      const userRef = doc(db, USER_COLLECTION, currentUser.uid);
-      
-      const unsubscribe = onSnapshot(userRef, (docSnap) => {
-          if (docSnap.exists()) {
-              const cloudData = docSnap.data() as User;
-              
-              // Only update if critical fields changed (Plan, Expiry, or Admin forced changes)
-              // We compare against current state to prevent unnecessary re-renders or loops
-              if (
-                  cloudData.plan !== currentUser.plan || 
-                  cloudData.planExpires !== currentUser.planExpires
-              ) {
-                  // Merge Cloud Data (Plan) with Local Data (DeviceId, etc)
-                  // We prioritize Cloud for Plan/Usage, but keep current DeviceID if needed
-                  const merged = { ...currentUser, ...cloudData };
-                  
-                  // Re-validate expiration immediately upon receiving cloud update
-                  // This handles cases where admin sets a past date or immediate expiry
-                  const validated = validateUserAccount(merged);
-                  
-                  // Only update session if validation didn't already trigger a save/update
-                  if (validated.plan === merged.plan) {
-                      updateSessionFromCloud(validated);
-                  }
-              }
-          }
-      }, (error) => {
-          console.error("Cloud listener error:", error);
-      });
-
-      return () => unsubscribe();
-  }, [currentUser?.username, currentUser?.plan, currentUser?.planExpires, isFirebaseEnabled, updateSessionFromCloud, validateUserAccount]);
-
 
   // --- LOCAL STORAGE LISTENER (Tab Sync) ---
   useEffect(() => {
@@ -1129,8 +1018,6 @@ function App() {
         </div>
       )}
 
-      {view === 'AUTH' && <Auth onLogin={handleLogin} />}
-      
       {view === 'HOME' && (
           <FileUpload 
               onFilesLoaded={handleFilesLoaded} 
@@ -1232,13 +1119,6 @@ function App() {
         isOpen={isPricingOpen} 
         onClose={() => setIsPricingOpen(false)} 
         user={currentUser} 
-      />
-
-      <AdminPanelModal 
-        isOpen={isAdminPanelOpen} 
-        onClose={() => setIsAdminPanelOpen(false)}
-        currentUser={currentUser}
-        onUpdateUser={handleForceUserUpdate} 
       />
 
       {isTranslateModalOpen && (
@@ -1855,11 +1735,6 @@ STAGE 2: ORDER LOCK (subtitle order final)`);
               </div>
           </div>
       )}
-      <BypassErrorModal 
-          isOpen={isBypassModalOpen} 
-          onClose={() => setIsBypassModalOpen(false)} 
-          message={bypassModalMessage} 
-      />
     </div>
   );
 }
