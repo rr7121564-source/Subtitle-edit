@@ -1,0 +1,16 @@
+564:  const previewData = useMemo(() => {
+583:    previewData.forEach(evt => {
+593:  }, [findText, previewData]);
+597:      if (previewData.length === 0) return 60; // Default 1 min if no subtitles
+598:      return previewData[previewData.length - 1].end + 5; // Last subtitle + 5s buffer
+599:  }, [previewData]);
+602:    if (previewData.length === 0) return;
+604:      const next = previewData.find(s => s.start > currentTime + 0.05);
+607:      const prev = [...previewData].reverse().find(s => s.start < currentTime - 0.5);
+689:  const activeSubtitles = useMemo(() => { return previewData.filter(evt => currentTime >= evt.start && currentTime < evt.end); }, [previewData, currentTime]);
+691:  const handleEditSave = (id: number) => { const item = previewData.find(p => p.id === id); if (!item) return; updateLine(item, tempText); setEditingId(null); };
+702:      const item = previewData.find(p => p.id === textEditModalData.id);
+732:      const itemIndex = previewData.findIndex(p => p.id === id);
+733:      const item = previewData[itemIndex];
+754:          const prevItem = previewData[itemIndex - 1];
+870:  const displayData = useMemo(() => { const lowerSearch = findText.toLowerCase(); return previewData.filter(e => { if (!findText) return true; return e.rawText.toLowerCase().includes(lowerSearch); }); }, [previewData, findText]);

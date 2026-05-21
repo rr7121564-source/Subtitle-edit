@@ -1,0 +1,8 @@
+{
+  "name": "Subtitle Editor ipx",
+  "description": "AI-powered subtitle editor for fan subbing with a focus on raw, intense translations.",
+  "requestFramePermissions": [
+    "clipboard-read",
+    "clipboard-write"
+  ]
+}

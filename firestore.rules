@@ -1,0 +1,55 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: Firebase Auth UID
+    // Fields:
+    //   - uid: string (required) - Firebase Auth UID
+    //   - username: string (required) - User's display name
+    //   - email: string (required) - User's email address
+    //   - deviceId: string (optional) - Device fingerprint
+    //   - plan: string (optional) - Subscription plan tier
+    //   - planExpires: number (optional) - Expiration timestamp
+    //   - totalUsage: number (optional) - Total number of exports
+    //   - lastActive: number (optional) - Last active timestamp
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+       return request.auth != null;
+    }
+
+    function isOwner(userId) {
+       return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+       return isAuthenticated() && request.auth.token.email == "rr7121564@gmail.com";
+    }
+
+    function isValidEmail(email) {
+       return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'username', 'email']) &&
+             data.uid is string &&
+             data.username is string && data.username.size() > 0 && data.username.size() < 100 &&
+             isValidEmail(data.email);
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.uid == userId;
+      allow update: if (isOwner(userId) || isAdmin()) && isValidUser(request.resource.data) && request.resource.data.uid == resource.data.uid;
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "short_name": "SubSwap",
+  "name": "SubSwap - AI Subtitle Editor",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/4063/4063853.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/4063/4063853.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#050812",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#050812",
+  "orientation": "portrait"
+}

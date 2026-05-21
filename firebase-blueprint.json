@@ -1,0 +1,53 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and usage data",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID"
+        },
+        "username": {
+          "type": "string",
+          "description": "User's display name"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User's email address"
+        },
+        "deviceId": {
+          "type": "string",
+          "description": "Device fingerprint"
+        },
+        "plan": {
+          "type": "string",
+          "description": "Subscription plan tier"
+        },
+        "planExpires": {
+          "type": "number",
+          "description": "Expiration timestamp of the plan"
+        },
+        "totalUsage": {
+          "type": "number",
+          "description": "Total number of exports"
+        },
+        "lastActive": {
+          "type": "number",
+          "description": "Last active timestamp"
+        }
+      },
+      "required": ["uid", "username", "email"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "Stores user profiles, keyed by Firebase Auth UID"
+    }
+  }
+}
