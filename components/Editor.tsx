@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { SubtitleData } from '../types';
 import { ChevronLeft, ChevronRight, ClipboardPaste, Languages, Eye, X, Undo2, Redo2, ListChecks } from 'lucide-react';
 import { applyAutoCPL, normalizeText } from '../services/parser';
+import TranslateModal from './TranslateModal';
 
 interface EditorProps {
   data: SubtitleData;
@@ -139,24 +140,16 @@ const Editor: React.FC<EditorProps> = ({ data, onUpdate, onBack, onPreview, undo
   };
   // -----------------------------
 
-  const handleTranslate = async () => {
-    const currentTextLines = textContent.split('\n');
-    const indicesToTranslate = selectedIndices.size > 0 
-      ? Array.from(selectedIndices as Set<number>).sort((a, b) => a - b)
-      : currentTextLines.map((_, i) => i);
-
-    const linesToTranslate = indicesToTranslate.map(i => {
-        const line = currentTextLines[i];
-        return `L${i + 1}. ${line}`;
-    });
-
-    // Add L00 Header line with file name (without extension)
-    const cleanFileName = data.originalFileName.replace(/\.(mkv|ass|srt|vtt|txt|mp4|webm|mks)$/i, "").replace(/\.[^/.]+$/, "");
-    const headerLine = `L00. Dialogue: 1,0:00:00.00,0:30:15.00,Name,,0,0,0,,(${cleanFileName})`;
-    const fullText = [headerLine, ...linesToTranslate].join('\n');
-
-    await navigator.clipboard.writeText(fullText);
+  const handleTranslate = () => {
     setIsTranslateModalOpen(true);
+  };
+
+  const handleTranslateComplete = (translatedLines: string[]) => {
+    const newData = { ...data };
+    if (activeTab === 'main') newData.mainDialogues = translatedLines;
+    else if (activeTab === 'signs') newData.signDialogues = translatedLines;
+    else newData.hiddenEvents = translatedLines;
+    onUpdate(newData);
   };
 
   const restoreTags = (original: string, translated: string) => {
@@ -447,7 +440,16 @@ const Editor: React.FC<EditorProps> = ({ data, onUpdate, onBack, onPreview, undo
           </div>
       </div>
 
-      {isTranslateModalOpen && (
+      <TranslateModal 
+        isOpen={isTranslateModalOpen} 
+        onClose={() => setIsTranslateModalOpen(false)} 
+        subtitleLines={currentLines} 
+        selectedIndices={selectedIndices} 
+        onTranslateComplete={handleTranslateComplete}
+        user={null}
+      />
+
+      {false && isTranslateModalOpen && (
         <div 
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
             onClick={() => setIsTranslateModalOpen(false)}
